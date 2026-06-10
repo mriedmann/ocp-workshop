@@ -1,0 +1,76 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build all decks
+        run: npm run build:all
+
+      - name: Create index page
+        run: |
+          cat > dist/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <title>OCP Workshop</title>
+            <style>
+              body { font-family: sans-serif; max-width: 600px; margin: 4rem auto; padding: 0 1rem; }
+              h1 { font-size: 1.5rem; }
+              ul { list-style: none; padding: 0; }
+              li { margin: 0.5rem 0; }
+              a { color: #0066CC; text-decoration: none; font-size: 1.1rem; }
+              a:hover { text-decoration: underline; }
+            </style>
+          </head>
+          <body>
+            <h1>OCP Workshop</h1>
+            <ul>
+              <li><a href="full/">Full Deck</a></li>
+              <li><a href="ch01/">Chapter 1 — Linux Fundamentals</a></li>
+              <li><a href="ch02/">Chapter 2 — Linux Containers</a></li>
+              <li><a href="ch03/">Chapter 3 — Kubernetes</a></li>
+              <li><a href="ch04/">Chapter 4 — OpenShift</a></li>
+            </ul>
+          </body>
+          </html>
+          EOF
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
