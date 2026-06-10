@@ -13,20 +13,21 @@ builds on these primitives: processes, namespaces, file descriptors, sockets.
 
 ---
 
-## What We'll Cover
+## What You'll Be Able to Do
 
 <v-clicks>
 
-- The Linux process model — PIDs, signals, and `/proc`
-- File system hierarchy and permissions
-- Networking — interfaces, sockets, and namespaces
-- systemd — units, targets, and journald
+- Inspect any running process and its open files via `/proc`
+- Reason about file ownership and permission bits the way the kernel enforces them
+- Distinguish real on-disk filesystems from virtual kernel interfaces (`/proc`, `/sys`)
+- Write, enable, and troubleshoot a `systemd` service with `journalctl`
 
 </v-clicks>
 
 <!--
 Most of you use these every day. Today we're going deeper —
 the goal is to understand these well enough to debug containers.
+Frame each section as a capability they'll need once the OS is hidden behind a container.
 -->
 
 ---
@@ -89,6 +90,9 @@ cat /proc/$$/net/if_inet6
 <!--
 Live demo: run these in the terminal. Show that /proc/1/maps requires root.
 That's foreshadowing for container security — root in the container, restricted on the host.
+
+🔎 ASK THE ROOM: before running `ls -la /proc/$$/fd` — what three file descriptors will always be there?
+(Answer: 0/1/2 — stdin, stdout, stderr.)
 -->
 
 ---
@@ -125,6 +129,8 @@ cat /proc/$PID/cmdline | tr '\0' ' '
 # Send SIGHUP to reload (safe for sshd)
 sudo kill -HUP $PID
 ```
+
+**✓ Expected:** you can find any process in the tree, read its `/proc/<pid>/fd`, and `sshd` reloads without dropping your session. *(No cleanup needed.)*
 
 <!--
 FACILITATOR NOTE:
@@ -188,9 +194,14 @@ The kernel enforces these on every `open()` call.
 - `w` (2) — write the file / create/delete in directory
 - `x` (1) — execute the file / enter the directory
 
+<TipBox type="warning" title="The directory x-bit trips everyone up">
+  You need <code>x</code> on a directory to <code>cd</code> into it or open files inside —
+  even with <code>r</code> and the exact filename. This bites you in container image builds.
+</TipBox>
+
 ::right::
 
-```bash {1|3-4|6-7|9-10}
+```bash {1-2|4-5|7-8|10-11}
 # Show ownership and mode
 ls -la /etc/passwd
 
@@ -314,6 +325,8 @@ sudo systemctl enable --now workshop-logger
 # Watch the logs
 journalctl -u workshop-logger -f
 ```
+
+**✓ Expected:** a new log line every 5 seconds. **Cleanup:** `sudo systemctl disable --now workshop-logger && sudo rm /etc/systemd/system/workshop-logger.service /usr/local/bin/workshop-logger.sh`
 
 <!--
 FACILITATOR NOTE:

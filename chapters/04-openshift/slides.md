@@ -10,21 +10,23 @@ Chapter 4: OpenShift — ~60 min lecture, 3 optional labs (~40 min).
 OCP 4.20+. No DeploymentConfig, no S2I, no BuildConfig, no Jaeger, no Elasticsearch.
 Core mental model shift: OCP = Kubernetes + immutable OS + self-managing platform components + enterprise security defaults.
 Every platform component is a Kubernetes Operator. You configure it via CRs, not config files.
+Callback: Chapter 3 gave us the Kubernetes primitives — Pods, Deployments, Services. OCP keeps all of them
+(every kubectl command works as oc) and wraps a managed platform layer around them.
 -->
 
 ---
 
-## What We'll Cover
+## What You'll Be Able to Do
 
 <v-clicks>
 
-- The OCP platform family — K8s, OKD, OKE, OVE, and OCP compared
-- RHCOS: immutable OS and declarative node configuration
-- Security Context Constraints — the #1 failure point for containers from other platforms
-- Routes: OCP-native TLS ingress with auto-wildcard DNS
-- Operators & OLM — the platform extension model
-- Built-in monitoring (Prometheus + Thanos) and logging (LokiStack)
-- GitOps with OpenShift GitOps (ArgoCD) and Kustomize overlays
+- Place OCP among its siblings (K8s, OKD, OKE, OVE) and read cluster health with `oc get co`
+- Configure RHCOS nodes with `MachineConfig` and debug them with `oc debug node/`
+- Diagnose and fix a Security Context Constraint rejection
+- Expose a Service with an edge-TLS Route
+- Install platform capabilities through Operators and OLM
+- Give a team self-service metrics, and place the logging/tracing stack
+- Deploy and self-heal an application with OpenShift GitOps and Kustomize overlays
 
 </v-clicks>
 
@@ -39,6 +41,8 @@ layout: section
 ---
 
 # Platform Overview
+
+<div class="text-sm opacity-50 mt-2">Module 1 of 7</div>
 
 ---
 
@@ -126,7 +130,7 @@ Every OCP platform component manages itself as a **Kubernetes Operator**:
 
 </v-clicks>
 
-```bash
+```bash {1-2|4-9}
 # Your primary cluster health signal — run this first, every time
 oc get clusteroperators
 
@@ -150,6 +154,8 @@ layout: section
 ---
 
 # RHCOS & Node Management
+
+<div class="text-sm opacity-50 mt-2">Module 2 of 7</div>
 
 ---
 
@@ -191,7 +197,7 @@ MCO renders multiple MCs into one "rendered config" per pool → reboots nodes o
 
 ::right::
 
-```yaml {all|1-6|7-16|17-22}
+```yaml {all|1-6|7-16|17-19}
 apiVersion: machineconfiguration.openshift.io/v1
 kind: MachineConfig
 metadata:
@@ -214,6 +220,8 @@ spec:
 ```
 
 <!--
+Terminology bridge from Chapter 3: the control-plane nodes are managed by the MachineConfigPool still named `master`.
+When you see the `master` pool, read it as "the control-plane nodes."
 Label machineconfiguration.openshift.io/role: worker assigns this MC to the worker pool.
 After apply: MCO cordons, drains, and reboots each worker one at a time (respecting maxUnavailable in the pool spec).
 CRITICAL: never apply an untested MC directly to master or worker pools — test on a custom pool first. A bad MC (invalid Ignition, wrong file path) renders nodes unbootable.
@@ -227,7 +235,7 @@ RHCOS Image Layering (OCP 4.18+ production-ready): for custom kernel modules or 
 
 Traditional SSH is replaced by `oc debug`. Nodes are cattle:
 
-```bash {1-6|8-14|16-20}
+```bash {1-6|8-11|13-14|16-18}
 # Open a privileged shell into the node OS (no SSH daemon needed)
 NODE=$(oc get nodes -l node-role.kubernetes.io/worker -o name | head -1)
 oc debug $NODE
@@ -235,12 +243,13 @@ oc debug $NODE
 chroot /host
 journalctl -u crio --no-pager | tail -50     # CRI-O log
 
-# Inspect MachineConfig state on the node
-cat /etc/machine-config-daemon/currentconfig \
-  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['metadata']['name'])"
+# Inspect OS + kubelet state on the node
 rpm-ostree status          # current + staged OS image (transactional)
 systemctl status kubelet
 exit; exit
+
+# Which rendered MachineConfig is the node on? (read via API — no node tooling)
+oc get $NODE -o jsonpath='{.metadata.annotations.machineconfiguration\.openshift\.io/currentConfig}{"\n"}'
 
 # Scale to replace a node (MachineSet = Deployment for nodes)
 oc get machineset -n openshift-machine-api
@@ -316,10 +325,13 @@ oc debug $NODE
 chroot /host
 cat /etc/os-release
 rpm-ostree status
-cat /etc/machine-config-daemon/currentconfig \
-  | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['metadata']['name'])"
 exit; exit
+
+# Back on your workstation — which rendered config is the node on?
+oc get $NODE -o jsonpath='{.metadata.annotations.machineconfiguration\.openshift\.io/currentConfig}{"\n"}'
 ```
+
+**✓ Expected:** `oc get mcp` shows `UPDATED=True` for both pools, and the node's `currentConfig` matches the worker pool's rendered config. *(Read-only — no cleanup.)*
 
 <!--
 FACILITATOR NOTE:
@@ -327,7 +339,7 @@ FACILITATOR NOTE:
 - MachineConfigPool UPDATED=True: all nodes are on the current rendered config
 - UPDATING=True: a MC change is rolling out — safe, just in-progress
 - DEGRADED=True: a node failed to apply — oc describe mcp worker for the specific error and node name
-- currentconfig should print rendered-worker-<hash> matching the mcp output
+- the currentConfig annotation should print rendered-worker-<hash> matching the mcp output
 -->
 
 ---
@@ -335,6 +347,8 @@ layout: section
 ---
 
 # Security
+
+<div class="text-sm opacity-50 mt-2">Module 3 of 7</div>
 
 ---
 
@@ -351,7 +365,7 @@ OCP wraps Kubernetes Namespaces with **Projects**:
 
 </v-clicks>
 
-```bash
+```bash {1-4|6-9|11-12}
 # Patch OAuth to add an HTPasswd IdP (htpasswd-secret must exist in openshift-config)
 oc patch oauth cluster --type=merge -p \
   '{"spec":{"identityProviders":[{"name":"htpasswd","type":"HTPasswd",
@@ -397,6 +411,8 @@ SCCs are OCP's pod security admission layer — they define what a pod **is allo
 SCC admission flow: pod request → webhook checks the pod's service account → available SCCs for that SA ranked by priority (higher first), then restrictiveness (more restrictive preferred) → first match applied → no match = pod rejected.
 restricted-v2 aligns with the Kubernetes restricted Pod Security Standard, so workloads that pass restricted-v2 also pass upstream PSA restricted enforcement.
 Linux admin analogy: SCCs are like SELinux policies for pods — they constrain what the process can do at the OS level, enforced by the admission webhook rather than the kernel.
+
+🔎 ASK THE ROOM: an image that runs fine under `podman run` is rejected on OCP with a "must run as non-root" error. What changed? (Answer: nothing about the image — restricted-v2 forbids the root UID the image assumes by default.)
 Common trap: granting anyuid cluster-wide to "fix things quickly." Instead, create a dedicated ServiceAccount, grant anyuid to that SA only, and patch the deployment to use it. Better still: fix the image.
 -->
 
@@ -410,7 +426,7 @@ When a pod fails to start on OCP, SCC is the first suspect:
 
 ::right::
 
-```bash {1-6|8-14|16-22}
+```bash {1-4|6-9|11-14|16-18|20-23}
 # Identify the SCC assigned (or missing)
 oc describe pod <pod> | grep -E "scc|Warning|Error"
 oc get pod <pod> \
@@ -485,6 +501,8 @@ oc adm policy add-role-to-user edit   dev-user     -n lab42-$(whoami)
 # Log in as dev-user and verify: can create pods, cannot delete namespace
 ```
 
+**✓ Expected:** nginx fails under `restricted-v2`, then runs after the `anyuid` service account is set; the `view` user can read but not create. **Cleanup:** `oc delete project lab42-$(whoami)`
+
 <!--
 FACILITATOR NOTE:
 - Expected first run: nginx:1.25 runs as root (UID 0). restricted-v2 rejects it.
@@ -501,6 +519,8 @@ layout: section
 ---
 
 # Routes & Networking
+
+<div class="text-sm opacity-50 mt-2">Module 4 of 7</div>
 
 ---
 
@@ -553,7 +573,7 @@ layout: two-cols-code
 
 ::right::
 
-```yaml {all|6-11|12-15}
+```yaml {all|6-10|11-12|13-15}
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
@@ -619,6 +639,8 @@ layout: section
 
 # Operators & OLM
 
+<div class="text-sm opacity-50 mt-2">Module 5 of 7</div>
+
 ---
 
 ## Operators and the Operator Lifecycle Manager
@@ -654,23 +676,34 @@ zoom: 0.9
 
 ## Key Operators Every SRE Should Know
 
-| Operator | Purpose | Channel |
-|---|---|---|
-| **OpenShift GitOps** | ArgoCD — GitOps / continuous delivery | `latest` |
-| **OpenShift Pipelines** | Tekton — CI/CD pipelines, TaskRuns | `latest` |
-| **OpenShift Logging** | LokiStack-based log aggregation (v6.x) | `stable-6.x` |
-| **Loki Operator** | LokiStack deployment lifecycle | `stable-6.x` |
-| **Cluster Observability Operator** | Grafana + console UI plugins | `development` |
-| **Red Hat OpenShift Distributed Tracing** | Tempo-based distributed tracing | `stable` |
-| **Red Hat build of OpenTelemetry** | OTel Collector + auto-instrumentation | `stable` |
-| **cert-manager for OpenShift** | TLS certificate lifecycle | `stable-v1` |
-| **External Secrets Operator** | Secrets from Vault/AWS/Azure (GA: 4.20) | `stable` |
-| **OpenShift Compliance Operator** | CIS/NIST scanning + automated remediation | `stable` |
-| **MetalLB** | Bare-metal LoadBalancer services | `stable` |
-| **Network Observability** | eBPF-based flow analysis, console UI | `stable` |
+<div class="grid grid-cols-2 gap-6 text-sm">
+<div>
+
+**Delivery & observability**
+- **OpenShift GitOps** — ArgoCD continuous delivery
+- **OpenShift Pipelines** — Tekton CI/CD
+- **OpenShift Logging + Loki** — LokiStack aggregation (v6.x)
+- **Cluster Observability Operator** — Grafana + UI plugins
+- **Distributed Tracing** — Tempo
+- **Red Hat build of OpenTelemetry** — collector + auto-instrumentation
+
+</div>
+<div>
+
+**Security & platform**
+- **cert-manager** — TLS certificate lifecycle
+- **External Secrets Operator** — Vault/AWS/Azure (GA 4.20)
+- **Compliance Operator** — CIS/NIST scan + remediation
+- **MetalLB** — bare-metal LoadBalancer services
+- **Network Observability** — eBPF flow analysis
+- **Service Mesh (OSSM 3.x)** — east-west mTLS, ambient mode
+
+</div>
+</div>
 
 <!--
 Installing: Operators → OperatorHub in console, search by name, click Install.
+Channels at a glance: GitOps/Pipelines = latest; Logging + Loki = stable-6.x; cert-manager = stable-v1; most others = stable; Cluster Observability Operator = development.
 Filter by "Red Hat" for operators with Red Hat support. "Certified" means ISV-tested on OCP but supported by the vendor. "Community" means no support guarantee.
 OpenShift Logging v6.x requires three operators: OpenShift Logging + Loki Operator + Cluster Observability Operator.
 Tekton Hub: deprecated January 2026. Migrate task/pipeline definitions to ArtifactHub.
@@ -681,6 +714,8 @@ layout: section
 ---
 
 # Monitoring & Observability
+
+<div class="text-sm opacity-50 mt-2">Module 6 of 7</div>
 
 ---
 
@@ -823,6 +858,8 @@ layout: section
 
 # GitOps with OpenShift GitOps
 
+<div class="text-sm opacity-50 mt-2">Module 7 of 7</div>
+
 ---
 
 ## Why GitOps?
@@ -864,7 +901,7 @@ The **Application** CR declares source (Git) and destination (cluster + namespac
 
 ::right::
 
-```yaml {all|6-11|12-15|16-22}
+```yaml {all|6-11|12-14|15-21}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -992,6 +1029,8 @@ oc scale deployment/myapp --replicas=5 -n lab43-$(whoami)
 oc get deployment myapp -n lab43-$(whoami) -w
 ```
 
+**✓ Expected:** ArgoCD reports the app `Synced`/`Healthy`; after you scale to 5, it reverts to the declared replica count within ~3 min. **Cleanup:** `oc delete application lab43-app -n openshift-gitops` (prune removes the app's resources)
+
 <!--
 FACILITATOR NOTE:
 - Pre-requisite: workshop git repo with gitops-examples/overlays/lab/ containing a Deployment (replicas: 2)
@@ -1009,13 +1048,11 @@ layout: center
 
 <v-clicks>
 
-- OCP manages itself via ~40 Cluster Operators — `oc get co` is your primary health dashboard
+- OCP manages itself via ~40 Cluster Operators — `oc get co` is your primary health check
 - RHCOS is immutable — configure nodes with `MachineConfig`, debug with `oc debug node/`
-- `restricted-v2` SCC blocks root containers by default — fix images, don't grant `anyuid`
-- Routes provide HAProxy-backed TLS ingress with automatic wildcard DNS; cert-manager automates the cert lifecycle
-- OLM delivers operators with full upgrade lifecycle management; install from OperatorHub, prefer Red Hat or certified operators
-- User workload monitoring gives each team their own Prometheus via `ServiceMonitor` + `PrometheusRule`
-- GitOps (ArgoCD) treats Git as source of truth; Kustomize overlays separate per-environment config
+- `restricted-v2` blocks root containers by default — fix images, don't grant `anyuid`
+- Operators/OLM add platform capabilities; user workload monitoring gives teams their own metrics
+- GitOps (ArgoCD) makes Git the source of truth; Kustomize overlays separate environments
 
 </v-clicks>
 

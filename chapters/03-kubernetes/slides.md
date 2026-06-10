@@ -13,19 +13,20 @@ and letting Kubernetes reconcile the cluster toward it.
 
 ---
 
-## What We'll Cover
+## What You'll Be Able to Do
 
 <v-clicks>
 
-- Kubernetes architecture — control plane and worker nodes
-- Pods, Deployments, and ReplicaSets
-- Services and Ingress — network exposure
-- ConfigMaps and Secrets — externalizing configuration
-- Persistent storage basics
+- Explain how the control plane reconciles desired state toward actual state
+- Deploy, scale, and roll out an application with a Deployment
+- Expose Pods internally and externally with Services and Ingress
+- Externalize configuration with ConfigMaps and Secrets
 
 </v-clicks>
 
 <!--
+Callback: Chapter 2 ran single containers by hand with Podman. Kubernetes orchestrates those same
+containers across many nodes — declaratively.
 Key mental model shift: stop thinking "run a container", start thinking "declare desired state".
 The scheduler, controller, and kubelet handle the rest.
 -->
@@ -80,7 +81,7 @@ A Pod is **ephemeral** — don't store state in it.
 
 ::right::
 
-```yaml {all|1-3|5-10|12-17}
+```yaml {all|1-4|5-10|12-16}
 apiVersion: v1
 kind: Pod
 metadata:
@@ -148,6 +149,9 @@ spec:
 <!--
 Always set resource requests and limits. Without requests, the scheduler can't make good placement decisions.
 Without limits, a runaway container can starve other pods on the node.
+
+🔎 ASK THE ROOM: if you `kubectl delete pod` one of the three replicas, what happens?
+(Answer: the ReplicaSet controller starts a replacement within seconds — desired state is still 3.)
 -->
 
 ---
@@ -167,7 +171,27 @@ duration: "20 min"
 
 ```bash
 # Apply the Deployment
-kubectl apply -f deployment.yaml
+kubectl apply -f - <<'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.25
+        ports:
+        - containerPort: 80
+EOF
 
 # Watch rollout
 kubectl rollout status deployment/web
@@ -188,6 +212,8 @@ kubectl get pods -w
 # Check rollout history
 kubectl rollout history deployment/web
 ```
+
+**✓ Expected:** scaling and image updates roll out with no downtime; a deleted pod is replaced within seconds. **Cleanup:** `kubectl delete deployment/web`
 
 <!--
 FACILITATOR NOTE:
@@ -230,7 +256,7 @@ layout: two-cols-code
 
 ::right::
 
-```yaml {1-4|6-14|16-21}
+```yaml {1-11|13-21|22-29}
 apiVersion: v1
 kind: Service
 metadata:
@@ -283,11 +309,16 @@ Separate configuration from the container image.
 ConfigMaps for non-sensitive data; Secrets for credentials.
 
 - Both can be mounted as files or injected as env vars
-- Secrets are base64-encoded at rest (not encrypted by default — use etcd encryption)
+- Secrets are base64-encoded at rest (not encrypted by default)
+
+<TipBox type="warning" title="Secrets are encoded, not encrypted">
+  By default a Secret is only base64-encoded in etcd — anyone with etcd or API read access can decode it.
+  Enable etcd encryption, and use Sealed Secrets or an external store (Vault) for real protection.
+</TipBox>
 
 ::right::
 
-```yaml {1-9|11-20}
+```yaml {1-9|11-19}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -358,7 +389,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: ubi9/ubi-minimal
+        image: registry.access.redhat.com/ubi9/ubi-minimal
         command: ["/bin/bash", "-c", "env && sleep 3600"]
         envFrom:
         - configMapRef:
@@ -370,6 +401,8 @@ EOF
 # Verify environment variables inside the pod
 kubectl exec -it deploy/configured-app -- env | grep -E "LOG|APP|username"
 ```
+
+**✓ Expected:** `LOG_LEVEL`, `APP_PORT`, `username`, and `password` all appear in the pod's environment. **Cleanup:** `kubectl delete deployment/configured-app configmap/app-config secret/db-creds`
 
 <!--
 FACILITATOR NOTE:

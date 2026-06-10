@@ -14,20 +14,21 @@ union mounts for images.
 
 ---
 
-## What We'll Cover
+## What You'll Be Able to Do
 
 <v-clicks>
 
-- Linux namespaces — process isolation primitives
-- cgroups v2 — resource limits and accounting
-- OCI container images — layers, digests, and registries
-- Podman — running and building containers on RHEL
+- Create and enter Linux namespaces by hand with `unshare` and `nsenter`
+- Apply and verify cgroup v2 CPU/memory limits on a running container
+- Read an OCI image as a stack of content-addressed layers
+- Build, run, and inspect a container image with Podman
 
 </v-clicks>
 
 <!--
-Key message: a container is not a VM. It's a process with namespace isolation
-and cgroup limits. Once you see it this way, debugging becomes much easier.
+Callback: in Chapter 1 we covered processes, /proc, and permissions. A container is just a process
+with different namespace memberships and cgroup limits — everything from Chapter 1 still applies.
+Key message: a container is not a VM. Once you see it this way, debugging becomes much easier.
 -->
 
 ---
@@ -75,7 +76,7 @@ This is the manual equivalent of starting a container.
 
 ::right::
 
-```bash {1-3|5-8|10-13}
+```bash {1-3|5-7|9-13}
 # New network namespace — no network
 sudo unshare -n bash
 ip link show   # only loopback
@@ -94,6 +95,9 @@ sudo ls -la /proc/$PID/ns/
 <!--
 Demo: run the unshare -n example. Show that ping fails — no network.
 This is the same isolation a container gets from its --network option.
+
+🔎 ASK THE ROOM: after `unshare -n bash`, what will `ip link show` print?
+(Answer: only `lo`, and it's DOWN — a fresh network namespace starts with no configured interfaces.)
 -->
 
 ---
@@ -107,7 +111,7 @@ The key use case: debug a running container with **host tools** — even when th
 
 ::right::
 
-```bash {1-4|6-8|10-12|14-19}
+```bash {1-4|6-8|10-12|14-16}
 # Resolve the PID of a running container
 sudo unshare -n -p --fork --mount-proc \
   sleep infinity &
@@ -174,12 +178,13 @@ Podman automatically creates a cgroup per container.
 
 ::right::
 
-```bash {1-3|5-7|9-12}
+```bash {1-2|4-7|9-13}
 # Your shell's cgroup
 cat /proc/$$/cgroup
 
 # Container's cgroup (after running one)
-podman run -d --name test busybox sleep infinity 
+podman run -d --name test \
+  registry.access.redhat.com/ubi9/ubi-minimal sleep infinity
 cat /proc/$(pgrep sleep)/cgroup
 
 # Memory limit set by Podman
@@ -218,9 +223,11 @@ podman run -it --name lab21 \
   registry.access.redhat.com/ubi9/ubi-minimal bash
 
 # Inside the container — observe isolation
-ps aux           # only container processes
-ip link show     # only loopback (no host network)
-cat /etc/hostname
+# (ubi-minimal has no `ps` or `ip` — inspect the kernel interfaces directly)
+ls /proc            # only a few numeric PIDs — the container's own processes
+cat /proc/1/comm    # PID 1 inside the container is bash
+ls /sys/class/net   # only `lo` — no host interfaces
+cat /etc/hostname   # hostname is the container ID
 exit
 
 # Run with a memory limit
@@ -235,9 +242,11 @@ cat /sys/fs/cgroup/$(cat /proc/$(pgrep sleep)/cgroup \
 podman rm -f lab21 limited
 ```
 
+**✓ Expected:** `ls /proc` shows only a few PIDs, `/sys/class/net` shows only `lo`, and `memory.max` reads `134217728` (128 MiB).
+
 <!--
 FACILITATOR NOTE:
-- Expected: ps inside container shows 2-3 processes max; hostname is the container ID
+- Expected: `ls /proc` shows only a few numeric PIDs; PID 1 is bash; only `lo` under /sys/class/net; hostname is the container ID
 - Common issue: registry.access.redhat.com requires login in some lab environments
   Solution: podman login registry.access.redhat.com (credentials provided)
 - Memory limit: 128m = 134217728 bytes
@@ -325,7 +334,8 @@ echo "<h1>OCP Workshop Lab 2.2</h1>" > index.html
 # Write the Containerfile
 cat > Containerfile <<'EOF'
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
-RUN microdnf install -y httpd && microdnf clean all
+RUN microdnf install -y httpd && microdnf clean all && \
+    sed -i 's/^Listen 80$/Listen 8080/' /etc/httpd/conf/httpd.conf
 COPY index.html /var/www/html/index.html
 EXPOSE 8080
 CMD ["httpd", "-D", "FOREGROUND"]
@@ -343,11 +353,14 @@ curl http://localhost:8080
 
 # Clean up
 podman rm -f lab22
+podman rmi workshop/lab22:v1
 ```
+
+**✓ Expected:** `curl` returns `<h1>OCP Workshop Lab 2.2</h1>`; `podman history` shows one layer per Containerfile instruction.
 
 <!--
 FACILITATOR NOTE:
-- Expected: curl returns the HTML page
+- Expected: curl returns the HTML page (httpd now listens on 8080 via the sed edit)
 - Common issue: port 8080 already in use — try -p 8081:8080
 - Ask: how many layers does the image have? Why?
 - Show `podman image inspect` for the digest and layer list
