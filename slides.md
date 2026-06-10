@@ -74,7 +74,7 @@ layout: end
 
 # Thank You
 
-Questions? Feedback? Resources at your lab environment home page.
+Questions? Feedback?
 
 <!--
 Point attendees to the resource list in their lab environment.
