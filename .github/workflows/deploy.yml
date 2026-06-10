@@ -31,8 +31,11 @@ jobs:
         run: >
           npx slidev build slides.md
           --base /${{ github.event.repository.name }}/
-          --router-mode hash
+          --router-mode history
           --out dist
+
+      - name: Add SPA fallback for GitHub Pages
+        run: cp dist/index.html dist/404.html
 
       - uses: actions/upload-pages-artifact@v3
         with:
