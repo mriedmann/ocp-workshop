@@ -1,0 +1,33 @@
+{
+  "name": "ocp-workshop",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev":        "slidev slides.md --open",
+    "dev:ch01":   "slidev chapters/01-linux/slides.md --open",
+    "dev:ch02":   "slidev chapters/02-containers/slides.md --open",
+    "dev:ch03":   "slidev chapters/03-kubernetes/slides.md --open",
+    "dev:ch04":   "slidev chapters/04-openshift/slides.md --open",
+
+    "build":      "slidev build slides.md --out dist/full",
+    "build:ch01": "slidev build chapters/01-linux/slides.md --out dist/ch01",
+    "build:ch02": "slidev build chapters/02-containers/slides.md --out dist/ch02",
+    "build:ch03": "slidev build chapters/03-kubernetes/slides.md --out dist/ch03",
+    "build:ch04": "slidev build chapters/04-openshift/slides.md --out dist/ch04",
+    "build:all":  "npm run build && npm run build:ch01 && npm run build:ch02 && npm run build:ch03 && npm run build:ch04",
+
+    "export":      "slidev export slides.md --output dist/ocp-workshop.pdf --with-toc",
+    "export:ch01": "slidev export chapters/01-linux/slides.md --output dist/ch01-linux.pdf",
+    "export:ch02": "slidev export chapters/02-containers/slides.md --output dist/ch02-containers.pdf",
+    "export:ch03": "slidev export chapters/03-kubernetes/slides.md --output dist/ch03-kubernetes.pdf",
+    "export:ch04": "slidev export chapters/04-openshift/slides.md --output dist/ch04-openshift.pdf",
+    "export:all":  "npm run export && npm run export:ch01 && npm run export:ch02 && npm run export:ch03 && npm run export:ch04"
+  },
+  "dependencies": {
+    "@slidev/cli":           "^52.16.0",
+    "@slidev/theme-default": "^0.25.0",
+    "@iconify-json/logos":   "^1.2.0",
+    "@iconify-json/mdi":     "^1.2.0",
+    "playwright-chromium":   "^1.40.0"
+  }
+}

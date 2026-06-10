@@ -1,0 +1,26 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: workshop-app
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/sclorg/django-ex.git
+      ref: master
+  strategy:
+    type: Source
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: python-39:latest
+        namespace: openshift
+  output:
+    to:
+      kind: ImageStreamTag
+      name: workshop-app:latest
+  triggers:
+  - type: GitHub
+    github:
+      secret: workshop-secret
+  - type: ConfigChange

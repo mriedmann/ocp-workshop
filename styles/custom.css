@@ -1,0 +1,103 @@
+/* ==============================================
+   OCP Workshop — Custom Theme Overrides
+   ============================================== */
+
+:root {
+  --ocp-red:        #EE0000;
+  --ocp-navy:       #151515;
+  --ocp-blue:       #0066CC;
+  --ocp-blue-light: #EBF4FF;
+
+  --slidev-theme-primary: var(--ocp-blue);
+}
+
+/* ---- Typography ---- */
+.slidev-layout {
+  font-size: 1.05rem;
+  line-height: 1.65;
+  padding-bottom: 2.5rem; /* room for global-bottom footer */
+}
+
+.slidev-layout h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.slidev-layout h2 {
+  font-weight: 600;
+  color: var(--ocp-navy);
+}
+
+/* Section layout: colored accent bar */
+.slidev-layout.section h1 {
+  border-left: 6px solid var(--ocp-blue);
+  padding-left: 1rem;
+  color: var(--ocp-navy);
+}
+
+/* ---- Code blocks ---- */
+.slidev-layout pre {
+  border-radius: 0.5rem;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.slidev-layout .highlighted-line {
+  background-color: rgba(0, 102, 204, 0.12);
+  border-left: 3px solid var(--ocp-blue);
+  margin: 0 -1.5rem;
+  padding: 0 1.5rem;
+}
+
+/* ---- Lists ---- */
+.slidev-layout ul {
+  list-style: none;
+  padding-left: 0.5rem;
+}
+
+.slidev-layout ul > li::before {
+  content: "▸ ";
+  color: var(--ocp-blue);
+  font-weight: 700;
+}
+
+/* ---- Tables ---- */
+.slidev-layout table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.slidev-layout th {
+  background: var(--ocp-navy);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.slidev-layout td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.slidev-layout tr:nth-child(even) td {
+  background: #f8f9fa;
+}
+
+/* ---- Blockquotes ---- */
+.slidev-layout blockquote {
+  border-left-color: var(--ocp-blue);
+  background: var(--ocp-blue-light);
+  border-radius: 0 0.25rem 0.25rem 0;
+  padding: 0.5rem 1rem;
+}
+
+/* ---- v-click animations ---- */
+.slidev-vclick-target {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.slidev-vclick-hidden {
+  opacity: 0;
+  transform: translateY(4px);
+}
