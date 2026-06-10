@@ -1,7 +1,7 @@
 ---
 layout: chapter-title
 chapter: "01"
-title: "Linux Fundamentals"
+heading: "Linux Fundamentals"
 subtitle: "Processes, filesystem, networking, and systemd"
 ---
 
@@ -94,7 +94,7 @@ That's foreshadowing for container security — root in the container, restricte
 ---
 layout: lab-exercise
 lab: "1.1"
-title: "Explore the Process Tree"
+heading: "Explore the Process Tree"
 duration: "15 min"
 ---
 
@@ -270,7 +270,7 @@ Show journalctl -xe for debugging a failed service — it's the first thing to r
 ---
 layout: lab-exercise
 lab: "1.2"
-title: "Write and Manage a systemd Service"
+heading: "Write and Manage a systemd Service"
 duration: "20 min"
 ---
 

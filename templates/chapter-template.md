@@ -1,7 +1,7 @@
 ---
 layout: chapter-title
 chapter: "<!-- TODO: 01, 02, 03, or 04 -->"
-title: "<!-- TODO: Chapter Title -->"
+heading: "<!-- TODO: Chapter Title -->"
 subtitle: "<!-- TODO: One-line description of what this chapter covers -->"
 ---
 
@@ -82,7 +82,7 @@ TODO: Walk through the code — explain what each highlighted section does.
 ---
 layout: lab-exercise
 lab: "<!-- TODO: e.g. 1.1 -->"
-title: "<!-- TODO: Lab Title -->"
+heading: "<!-- TODO: Lab Title -->"
 duration: "<!-- TODO: e.g. 15 min -->"
 ---
 
@@ -134,7 +134,7 @@ layout: two-cols-code
 ---
 layout: lab-exercise
 lab: "<!-- TODO: e.g. 1.2 -->"
-title: "<!-- TODO: Second Lab Title -->"
+heading: "<!-- TODO: Second Lab Title -->"
 duration: "<!-- TODO: e.g. 20 min -->"
 ---
 

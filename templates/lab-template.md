@@ -1,7 +1,7 @@
 ---
 layout: lab-exercise
 lab: "<!-- TODO: e.g. 3.2 -->"
-title: "<!-- TODO: Lab Title -->"
+heading: "<!-- TODO: Lab Title -->"
 duration: "<!-- TODO: e.g. 20 min -->"
 ---
 

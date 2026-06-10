@@ -26,6 +26,7 @@
 .slidev-layout h2 {
   font-weight: 600;
   color: var(--ocp-navy);
+  margin-bottom: 0.5rem;
 }
 
 /* Section layout: colored accent bar */
@@ -73,6 +74,11 @@
   color: #fff;
   padding: 0.5rem 0.75rem;
   text-align: left;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 3px solid var(--ocp-blue);
 }
 
 .slidev-layout td {

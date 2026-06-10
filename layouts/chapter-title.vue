@@ -1,7 +1,7 @@
 <script setup>
 defineProps({
   chapter:  { default: '01' },
-  title:    { default: 'Chapter Title' },
+  heading:  { default: 'Chapter Title' },
   subtitle: { default: '' },
 })
 </script>
@@ -21,7 +21,7 @@ defineProps({
       class="text-6xl font-700 leading-tight mb-4 m-0"
       style="color: #fff; border: none; padding: 0;"
     >
-      {{ title }}
+      {{ heading }}
     </h1>
     <p
       v-if="subtitle"

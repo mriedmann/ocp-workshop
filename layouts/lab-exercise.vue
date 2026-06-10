@@ -1,7 +1,7 @@
 <script setup>
 defineProps({
   lab:      { default: '' },
-  title:    { default: 'Lab Exercise' },
+  heading:  { default: 'Lab Exercise' },
   duration: { default: '' },
 })
 </script>
@@ -18,7 +18,7 @@ defineProps({
           Lab {{ lab }}<span v-if="duration"> · {{ duration }}</span>
         </div>
         <h1 class="text-2xl font-700 m-0" style="color: #fff; border: none; padding: 0;">
-          {{ title }}
+          {{ heading }}
         </h1>
       </div>
     </div>

@@ -1,7 +1,7 @@
 ---
 layout: chapter-title
 chapter: "02"
-title: "Linux Containers"
+heading: "Linux Containers"
 subtitle: "Namespaces, cgroups, images, and Podman"
 ---
 
@@ -197,7 +197,7 @@ This is how systemd and the kubelet track container resource usage.
 ---
 layout: lab-exercise
 lab: "2.1"
-title: "Run and Inspect Your First Container"
+heading: "Run and Inspect Your First Container"
 duration: "15 min"
 ---
 
@@ -303,7 +303,7 @@ EXPOSE is documentation only — it doesn't open a port.
 ---
 layout: lab-exercise
 lab: "2.2"
-title: "Build and Push a Container Image"
+heading: "Build and Push a Container Image"
 duration: "20 min"
 ---
 

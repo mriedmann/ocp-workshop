@@ -1,7 +1,7 @@
 ---
 layout: chapter-title
 chapter: "03"
-title: "Kubernetes"
+heading: "Kubernetes"
 subtitle: "Orchestrating containers at scale"
 ---
 
@@ -119,7 +119,7 @@ The ReplicaSet controller keeps the replica count correct.
 
 ::right::
 
-```yaml {1-3|5-11|13-22}
+```yaml {1-4|5-13|14-23}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -153,7 +153,7 @@ Without limits, a runaway container can starve other pods on the node.
 ---
 layout: lab-exercise
 lab: "3.1"
-title: "Deploy and Scale an Application"
+heading: "Deploy and Scale an Application"
 duration: "20 min"
 ---
 
@@ -167,7 +167,7 @@ duration: "20 min"
 
 ```bash
 # Apply the Deployment
-kubectl apply -f https://raw.githubusercontent.com/your-repo/workshop/main/manifests/web-deployment.yaml
+kubectl apply -f deployment.yaml
 
 # Watch rollout
 kubectl rollout status deployment/web
@@ -317,7 +317,7 @@ Warn: Secrets are not encrypted by default in etcd. Use sealed-secrets or Vault 
 ---
 layout: lab-exercise
 lab: "3.2"
-title: "Externalize Configuration"
+heading: "Externalize Configuration"
 duration: "20 min"
 ---
 

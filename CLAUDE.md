@@ -39,7 +39,7 @@ ocp-workshop/
 │   └── two-cols-code.vue     Prose left | code right (::right:: slot)
 │
 ├── public/images/            Static assets — reference as /images/foo.png in slides
-├── styles/custom.css         CSS variable overrides (auto-loaded by Slidev)
+├── styles/index.css          CSS variable overrides (auto-loaded by Slidev)
 │
 ├── templates/
 │   ├── chapter-template.md   Skeleton for a new chapter — copy and fill in TODOs

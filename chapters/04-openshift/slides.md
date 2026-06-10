@@ -1,7 +1,7 @@
 ---
 layout: chapter-title
 chapter: "04"
-title: "OpenShift"
+heading: "OpenShift"
 subtitle: "Enterprise Kubernetes with integrated developer workflows"
 ---
 
@@ -188,7 +188,7 @@ It creates: BuildConfig, ImageStream, Deployment, Service — all wired together
 ---
 layout: lab-exercise
 lab: "4.1"
-title: "Deploy an App from Source"
+heading: "Deploy an App from Source"
 duration: "20 min"
 ---
 
@@ -300,7 +300,7 @@ the image genuinely requires root and there's no alternative. Document the reaso
 ---
 layout: lab-exercise
 lab: "4.2"
-title: "Debug an SCC Violation"
+heading: "Debug an SCC Violation"
 duration: "20 min"
 ---
 
